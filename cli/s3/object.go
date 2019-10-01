@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/aws/aws-sdk-go/service/s3/s3iface"
 )
@@ -24,6 +25,16 @@ func GetObject(svc s3iface.S3API, path Path) Object {
 	}
 	res, err := svc.GetObject(input)
 	if err != nil {
+		// https://docs.aws.amazon.com/sdk-for-go/v1/developer-guide/handling-errors.html
+		if aerr, ok := err.(awserr.Error); ok {
+			switch aerr.Code() {
+			case s3.ErrCodeNoSuchKey:
+				return Object{
+					Body:        nil,
+					ContentType: "text/plain",
+				}
+			}
+		}
 		fmt.Println(err)
 		os.Exit(1)
 	}
